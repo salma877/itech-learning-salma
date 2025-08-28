@@ -1,0 +1,176 @@
+{
+  "name": "Daily Task Emailer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        16
+      ],
+      "id": "f77b6909-5816-4ac3-95de-e8d379aeb340",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10XK8VRc6mC1Fl115hXEqIyI82KqrerybuuxAVzFClwA",
+          "mode": "list",
+          "cachedResultName": "flower_store",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10XK8VRc6mC1Fl115hXEqIyI82KqrerybuuxAVzFClwA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10XK8VRc6mC1Fl115hXEqIyI82KqrerybuuxAVzFClwA/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -256,
+        16
+      ],
+      "id": "302e498a-c497-44e3-ae1d-acc4a04105bc",
+      "name": "Fetch Tasks from Sheet.",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JA8tCObAx7yOO5eA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get rows from Google Sheets\nconst rows = items.map(item => item.json);\n\nlet output = \"📋 Task List:\\n\\n\";\noutput += \"#   | Task\\n\";\noutput += \"----|--------------------------------------\\n\";\n\nrows.forEach((r, i) => {\n  output += `${String(i+1).padEnd(3)} | ${r.Task}\\n`;\n});\n\nreturn [{ json: { emailBody: output } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        16
+      ],
+      "id": "276c8448-fe22-46be-9a2b-694f4692cacb",
+      "name": "Format Task List"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.recipient }}",
+        "subject": "Your Tasks",
+        "emailType": "text",
+        "message": "=Here are your tasks :\n{{ $('Format Task List').item.json.emailBody }}\nThanks,\nMiss.Salma",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        352,
+        16
+      ],
+      "id": "1109f42e-bd6a-4ccd-b862-f7a83d57dcae",
+      "name": "Email Tasks to User",
+      "webhookId": "ea8ca2f5-7c73-4fc5-93e9-187fb5b4032c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "hiopJ8WngBp0LFud",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6d942dcb-6f58-4729-8aba-e6b387c69ab0",
+              "name": "recipient",
+              "value": "ahmedazoz6726@gmail.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        128,
+        16
+      ],
+      "id": "f2c0b990-33fb-4787-8c2b-ab0e840f810c",
+      "name": "Set Recipient"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Tasks from Sheet.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Tasks from Sheet.": {
+      "main": [
+        [
+          {
+            "node": "Format Task List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Task List": {
+      "main": [
+        [
+          {
+            "node": "Set Recipient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Recipient": {
+      "main": [
+        [
+          {
+            "node": "Email Tasks to User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "dbc7a7a7-92e4-475f-adbe-ce006acdb1d3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "87dcba0509563002ddfd7815c02e139f57ebab7999164e3e8c0ba9982099e9da"
+  },
+  "id": "Fs7Dez3JXNDLyvIE",
+  "tags": []
+}

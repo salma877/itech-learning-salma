@@ -1,0 +1,283 @@
+{
+  "name": "Mini_project",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -704,
+        -16
+      ],
+      "id": "abf765c8-085c-44ce-80f4-bc80699a1446",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "model_results"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        -16
+      ],
+      "id": "3207ea6c-cf95-4a71-bb78-31a45f21f5a3",
+      "name": "Fetch Model Results.",
+      "credentials": {
+        "supabaseApi": {
+          "id": "hXffw1APyxD2Mt9i",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "summary",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "b2819cc3-918c-40c0-89fa-999f2751f409",
+      "name": "Aggregate Metrics"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "= \"Here are the results from the model training. Summarize for a Google Sheet: {{ $json.summary.map(s => s.model_name + ' - Accuracy: ' + s.accuracy + ', F1: ' + s.f1_score + ', ROC_AUC: ' + s.roc_auc).join(' | ') }}\"\n\n",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a helpful assistant that creates short summaries of machine learning experiment results. Always be concise (1–2 sentences). Highlight the most important metrics like accuracy and parameters. Do not include unnecessary details\n\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -128,
+        -16
+      ],
+      "id": "381cc07d-4733-4774-9354-06221c5c0929",
+      "name": "Summarize Results"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "abf7f84c-c3fe-4ba1-abaf-0da726ae9eab",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "75b52da7-7b6c-467d-b512-d67160ebcfd1",
+              "name": "timestamp",
+              "value": "= {{ $now }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "34772919-56ca-4e24-ba12-64bd59a7a46c",
+      "name": "Prepare Row Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1AjWx6rRJ4aGNXQcY0gm-7snMMh5_8zogqYdlGZQavCw",
+          "mode": "list",
+          "cachedResultName": "results ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AjWx6rRJ4aGNXQcY0gm-7snMMh5_8zogqYdlGZQavCw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AjWx6rRJ4aGNXQcY0gm-7snMMh5_8zogqYdlGZQavCw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "text": "={{ $json.text }}",
+            "timestamp": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "text"
+          ],
+          "schema": [
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        336,
+        96
+      ],
+      "id": "253d69d6-73b6-4806-82a8-bb93ef21c8f4",
+      "name": "Save to Google Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JA8tCObAx7yOO5eA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "z-ai/glm-4.5-air:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        192
+      ],
+      "id": "0ee36c7b-0d24-42ef-97b4-fef6f4b263ed",
+      "name": "LLM Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "xxICll11FEfVQCtc",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Model Results.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Model Results.": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Metrics": {
+      "main": [
+        [
+          {
+            "node": "Summarize Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Results": {
+      "main": [
+        [
+          {
+            "node": "Prepare Row Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Row Data": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheet": {
+      "main": [
+        []
+      ]
+    },
+    "LLM Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize Results",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "58e41b4a-2690-4442-bf3c-44f2081e14b1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "87dcba0509563002ddfd7815c02e139f57ebab7999164e3e8c0ba9982099e9da"
+  },
+  "id": "n7bIFUtRGDogYn97",
+  "tags": []
+}

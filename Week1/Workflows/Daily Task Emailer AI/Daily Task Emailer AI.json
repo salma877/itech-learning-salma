@@ -1,0 +1,240 @@
+{
+  "name": "Daily Task Emailer AI",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -640,
+        16
+      ],
+      "id": "2d16a220-b437-4f07-a5f6-f58439da00e4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get rows from Google Sheets\nconst rows = items.map(item => item.json);\n\nlet output = \"📋 Task List:\\n\\n\";\noutput += \"#   | Task\\n\";\noutput += \"----|--------------------------------------\\n\";\n\nrows.forEach((r, i) => {\n  output += `${String(i+1).padEnd(3)} | ${r.Task}\\n`;\n});\n\nreturn [{ json: { emailBody: output } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        16
+      ],
+      "id": "4d5bb0f8-3634-493d-bbcd-d4034b6867d2",
+      "name": "Format Task List"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.recipient }}",
+        "subject": "Your Tasks",
+        "emailType": "text",
+        "message": "=Here are your tasks :\n{{ $('Summarize Tasks').item.json.text }}\nThanks,\nMiss.Salma",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        352,
+        16
+      ],
+      "id": "0ef53232-9923-4e4d-8664-8840b8dab285",
+      "name": "Email Tasks to User",
+      "webhookId": "1d9b73e9-84aa-4903-a696-11ac7494ab46",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "hiopJ8WngBp0LFud",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6d942dcb-6f58-4729-8aba-e6b387c69ab0",
+              "name": "recipient",
+              "value": "ahmedazoz6726@gmail.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        128,
+        16
+      ],
+      "id": "11010f87-c3a3-4499-bc21-b031967c13b1",
+      "name": "Set Recipient"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10XK8VRc6mC1Fl115hXEqIyI82KqrerybuuxAVzFClwA",
+          "mode": "list",
+          "cachedResultName": "flower_store",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10XK8VRc6mC1Fl115hXEqIyI82KqrerybuuxAVzFClwA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10XK8VRc6mC1Fl115hXEqIyI82KqrerybuuxAVzFClwA/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -448,
+        16
+      ],
+      "id": "c2795bb1-45ea-401c-aec1-ee4826a7ce8c",
+      "name": "Fetch Tasks from Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JA8tCObAx7yOO5eA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here are today’s tasks:\n{{ $json.emailBody }}\n\nSummarize them for the user.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a helpful assistant that generates short daily task summaries.  Always be concise (2–3 sentences).  Highlight the most important tasks first.  Keep the tone motivating and friendly."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -128,
+        16
+      ],
+      "id": "1d70412e-5703-4cfc-a147-95b03ba18787",
+      "name": "Summarize Tasks"
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-r1-0528:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        208
+      ],
+      "id": "767e1c2d-1119-4d6e-97a2-1d673f65bd90",
+      "name": "LLM model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "xxICll11FEfVQCtc",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Tasks from Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Task List": {
+      "main": [
+        [
+          {
+            "node": "Summarize Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Recipient": {
+      "main": [
+        [
+          {
+            "node": "Email Tasks to User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Tasks from Sheet": {
+      "main": [
+        [
+          {
+            "node": "Format Task List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Tasks": {
+      "main": [
+        [
+          {
+            "node": "Set Recipient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize Tasks",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fb8e0f7b-c5fc-4e4b-a797-0a5ca1701c84",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "87dcba0509563002ddfd7815c02e139f57ebab7999164e3e8c0ba9982099e9da"
+  },
+  "id": "42l2YNPiHsH8uASQ",
+  "tags": []
+}
