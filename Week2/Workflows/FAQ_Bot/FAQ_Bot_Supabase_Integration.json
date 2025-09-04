@@ -1,0 +1,479 @@
+{
+  "name": "FAQ_Bot_Supabase_Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "faq-bot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1312,
+        80
+      ],
+      "name": "Receive_UserQuestion_Webhook",
+      "id": "c00188d3-221d-4529-b6ef-e472458b7d26",
+      "webhookId": "75821237-3335-41be-8289-efb6abb274eb"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://exolwscmvmqfjeovnslb.supabase.co/rest/v1/rpc/search_faqs_simple",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"search_query\": \"{{ $json.body.question }}\",\n  \"match_count\": 3\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1072,
+        80
+      ],
+      "id": "2d50fee7-75dc-4c18-925e-4bc129ea5cc2",
+      "name": "Query_FAQ_Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "DrrYoTWIzLPmPlLN",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the answer directly from HTTP node\nconst botAnswer = $input.first().json.answer || \"I'm sorry, I couldn't find an answer to your question. Please contact our support team at support@itech.example or call +20-123-456-789 for personalized assistance.\";\n\n// Get the match score if available\nconst confidence = $input.first().json.match_score || 0;\n\n// Generate session ID\nconst sessionId = $node['Receive_UserQuestion_Webhook'].json.session_id || $node['Receive_UserQuestion_Webhook'].json.headers['x-session-id'] || Math.random().toString(36).substring(2, 15);\n\n// Prepare response data\nconst responseData = {\n  session_id: sessionId,\n  user_question: $node['Receive_UserQuestion_Webhook'].json.body.question,\n  bot_answer: botAnswer,\n  confidence: confidence,\n  search_method: 'keyword',\n  user_ip: $node['Receive_UserQuestion_Webhook'].json.user_ip || $node['Receive_UserQuestion_Webhook'].json.headers['x-forwarded-for'] || 'unknown',\n  timestamp: new Date().toISOString(),\n  response_time_ms: Date.now() - new Date($node['Receive_UserQuestion_Webhook'].json.headers['x-n8n-request-start'] || Date.now()).getTime()\n};\n\nreturn { json: responseData };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        80
+      ],
+      "id": "9cc86314-051d-4ef2-8531-de0a857f6a21",
+      "name": "Transform_FAQResponse"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://exolwscmvmqfjeovnslb.supabase.co/rest/v1/conversations",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={   \"session_id\": \"{{ $json.session_id }}\",   \"user_question\": \"{{ $json.user_question }}\",   \"bot_answer\": \"{{ $json.bot_answer }}\",   \"confidence_score\": \"{{ $json.confidence }}\",   \"search_method\": \"{{ $json.search_method }}\",   \"user_ip\": \"{{ $json.user_ip }}\",   \"response_time_ms\": \"{{ $json.response_time_ms }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -608,
+        80
+      ],
+      "id": "c81956a6-f54a-4847-b8b8-ab60643e968c",
+      "name": "Store_Conversation_Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "DrrYoTWIzLPmPlLN",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1SGF6piRRQohshuvalvzzoF0nRgVsIpzLnk7MZyKLl1s",
+          "mode": "list",
+          "cachedResultName": "iTech FAQ Bot Conversations",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1SGF6piRRQohshuvalvzzoF0nRgVsIpzLnk7MZyKLl1s/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2111527514,
+          "mode": "list",
+          "cachedResultName": "All Conversations",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1SGF6piRRQohshuvalvzzoF0nRgVsIpzLnk7MZyKLl1s/edit#gid=2111527514"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Session ID": "={{ $('Transform_FAQResponse').item.json.session_id }}",
+            "Bot Answer": "={{ $('Transform_FAQResponse').item.json.bot_answer }}",
+            " User Question ": "={{ $('Transform_FAQResponse').item.json.user_question }}",
+            "Confidence": "={{ $('Transform_FAQResponse').item.json.confidence }}",
+            "Search Method": "={{ $('Transform_FAQResponse').item.json.search_method }}",
+            "User IP": "={{ $('Transform_FAQResponse').item.json.user_ip }}",
+            "Response Time": "={{ $('Transform_FAQResponse').item.json.response_time_ms }}",
+            "Timestamp": "={{ $('Transform_FAQResponse').item.json.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Session ID",
+              "displayName": "Session ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " User Question ",
+              "displayName": " User Question ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Bot Answer",
+              "displayName": "Bot Answer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Confidence",
+              "displayName": "Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Search Method",
+              "displayName": "Search Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "User IP",
+              "displayName": "User IP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Response Time",
+              "displayName": "Response Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -416,
+        80
+      ],
+      "id": "43b24e89-5839-4002-b50e-c9e75de81c50",
+      "name": "Log_Conversation_GoogleSheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JA8tCObAx7yOO5eA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "= https://exolwscmvmqfjeovnslb.supabase.co/rest/v1/conversation_summary?date=eq.{{ new  Date().toISOString().split('T')[0] }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -208,
+        80
+      ],
+      "id": "3fdb769c-33c7-4571-8276-489de62e4c2b",
+      "name": "Get_DailySummary_Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "DrrYoTWIzLPmPlLN",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process daily summary for Google Sheets\nconst summaryData = $input.all()[0].json;\n\nif (summaryData && summaryData.length > 0) {\n    // Existing summary for the day\n    const summary = summaryData[0];\n\n    return {\n        json: {\n            date: summary.date,\n            total_questions: summary.total_questions,\n            avg_confidence: Math.round(summary.avg_confidence * 100) / 100,\n            successful_answers: summary.successful_answers,\n            failed_answers: summary.failed_answers,\n            avg_response_time: 150, // Placeholder\n            top_questions: summary.common_questions \n                ? summary.common_questions.slice(0, 3).join('; ') \n                : ''\n        }\n    };\n} else {\n    // First question of the day\n    const functionNodeData = $node['Transform_FAQResponse'].json;\n\n    return {\n        json: {\n            date: new Date().toISOString().split('T')[0],\n            total_questions: 1,\n            avg_confidence: functionNodeData.confidence,\n            successful_answers: functionNodeData.confidence > 5 ? 1 : 0,\n            failed_answers: functionNodeData.confidence === 0 ? 1 : 0,\n            avg_response_time: functionNodeData.response_time_ms,\n            top_questions: functionNodeData.user_question\n        }\n    };\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        80
+      ],
+      "id": "dd375881-e9eb-4225-86f9-f9dd0075c981",
+      "name": "Transform_DailySummary"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1SGF6piRRQohshuvalvzzoF0nRgVsIpzLnk7MZyKLl1s",
+          "mode": "list",
+          "cachedResultName": "iTech FAQ Bot Conversations",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1SGF6piRRQohshuvalvzzoF0nRgVsIpzLnk7MZyKLl1s/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Daily Summary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1SGF6piRRQohshuvalvzzoF0nRgVsIpzLnk7MZyKLl1s/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $json.date }}",
+            "Total Questions": "={{ $json.total_questions }}",
+            "Avg Confidence": "={{ $json.avg_confidence }}",
+            "Successful Answers": "={{ $json.successful_answers }}",
+            "Failed Answers": "={{ $json.failed_answers }}",
+            "Response Time ": "={{ $json.avg_response_time }}",
+            "Top Questions": "={{ $json.top_questions }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Questions",
+              "displayName": "Total Questions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Avg Confidence",
+              "displayName": "Avg Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Successful Answers",
+              "displayName": "Successful Answers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Failed Answers",
+              "displayName": "Failed Answers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Response Time ",
+              "displayName": "Response Time ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Top Questions",
+              "displayName": "Top Questions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        80
+      ],
+      "id": "b3460a13-01d3-424f-9e70-f30abe1037b7",
+      "name": "Log_DailySummary_GoogleSheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JA8tCObAx7yOO5eA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"session_id\": \"{{ $node['Transform_FAQResponse'].json.session_id }}\",\n  \"question\": \"{{ $node['Transform_FAQResponse'].json.user_question }}\",\n  \"answer\": \"{{ $node['Transform_FAQResponse'].json.bot_answer }}\",\n  \"confidence\": \"{{ $node['Transform_FAQResponse'].json.confidence }}\",\n  \"timestamp\": \"{{ $node['Transform_FAQResponse'].json.timestamp }}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        368,
+        96
+      ],
+      "id": "43f80caf-ef71-435e-b3a8-5aebcfda8979",
+      "name": "Send_ResponseToUser"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive_UserQuestion_Webhook": {
+      "main": [
+        [
+          {
+            "node": "Query_FAQ_Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query_FAQ_Supabase": {
+      "main": [
+        [
+          {
+            "node": "Transform_FAQResponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform_FAQResponse": {
+      "main": [
+        [
+          {
+            "node": "Store_Conversation_Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store_Conversation_Supabase": {
+      "main": [
+        [
+          {
+            "node": "Log_Conversation_GoogleSheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log_Conversation_GoogleSheet": {
+      "main": [
+        [
+          {
+            "node": "Get_DailySummary_Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_DailySummary_Supabase": {
+      "main": [
+        [
+          {
+            "node": "Transform_DailySummary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform_DailySummary": {
+      "main": [
+        [
+          {
+            "node": "Log_DailySummary_GoogleSheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log_DailySummary_GoogleSheet": {
+      "main": [
+        [
+          {
+            "node": "Send_ResponseToUser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8971849a-f2c8-4514-b13f-fd1241bb0bed",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "87dcba0509563002ddfd7815c02e139f57ebab7999164e3e8c0ba9982099e9da"
+  },
+  "id": "DrvICCPy1uj9aVtW",
+  "tags": []
+}

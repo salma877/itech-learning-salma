@@ -1,0 +1,232 @@
+{
+  "name": "Flower Bloom – Order & FAQ Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "18sXGKeBPd3jjSOYh5c4zshlvB4megwnLVl1iJ87fcAw",
+          "mode": "list",
+          "cachedResultName": "  Flower Bloom – Order & Questions   (Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18sXGKeBPd3jjSOYh5c4zshlvB4megwnLVl1iJ87fcAw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1742973320,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18sXGKeBPd3jjSOYh5c4zshlvB4megwnLVl1iJ87fcAw/edit#gid=1742973320"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1184,
+        80
+      ],
+      "id": "cb77cd54-7c27-431a-9826-75c798c65a7c",
+      "name": "New Form Response",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "1C0k1TPljT2OUNqO",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Customer question : {{ $json['  Any question for us?  '] }}",
+        "options": {
+          "systemMessage": "=You are Flower Bloom’s assistant 🌸.\n\nFAQ Google Sheet:\n- You have access to the \"Contact info\" Google Sheet which contains the FAQ data.\n- The sheet has two columns: \" question\" and \"answer\".\n- Use these columns to answer customer questions.\n- Always find the FAQ question that is closest in meaning to the user’s question.\n- Do NOT add extra explanations, instructions, or steps.\n- Never tell the user that you accessed Google Sheets.\n- If no matching FAQ is found, reply exactly:\n\"Thank you 🌸 Our team will follow up.\"\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -848,
+        112
+      ],
+      "id": "61172e6b-44ee-4ca5-88f0-6e8b7588a585",
+      "name": "Answer Customer Question"
+    },
+    {
+      "parameters": {
+        "model": "z-ai/glm-4.5-air:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        272
+      ],
+      "id": "97110cfb-20eb-48a2-b13c-bc6de49c6010",
+      "name": "AI Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "xxICll11FEfVQCtc",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Bi-FYMX34Nmt66E0ohti07nDhdG6VLrbgZg9gWzKWRk",
+          "mode": "list",
+          "cachedResultName": "FAQ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Bi-FYMX34Nmt66E0ohti07nDhdG6VLrbgZg9gWzKWRk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Bi-FYMX34Nmt66E0ohti07nDhdG6VLrbgZg9gWzKWRk/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -704,
+        304
+      ],
+      "id": "d7c8d258-ab85-4787-a12d-6adb3b5c7cca",
+      "name": "Fetch FAQ Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JA8tCObAx7yOO5eA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "flower_orders",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "timestamp",
+              "fieldValue": "={{ $('New Form Response').item.json.Timestamp }}"
+            },
+            {
+              "fieldId": "full_name",
+              "fieldValue": "={{ $('New Form Response').item.json['Full Name'] }}"
+            },
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('New Form Response').item.json['  Phone Number  '] }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('New Form Response').item.json['  Email   '] }}"
+            },
+            {
+              "fieldId": "flower_type",
+              "fieldValue": "={{ $('New Form Response').item.json['  What type of flowers would you like?  '] }}"
+            },
+            {
+              "fieldId": "delivery_date",
+              "fieldValue": "={{ $('New Form Response').item.json['Preferred Delivery Date'] }}"
+            },
+            {
+              "fieldId": "delivery_address",
+              "fieldValue": "={{ $('New Form Response').item.json['  Delivery Address  '] }}"
+            },
+            {
+              "fieldId": "customer_question",
+              "fieldValue": "={{ $('New Form Response').item.json['  Any question for us?  '] }}"
+            },
+            {
+              "fieldId": "ai_answer",
+              "fieldValue": "={{ $json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        112
+      ],
+      "id": "ffcb09d2-d35b-4a11-bd0c-116729893a11",
+      "name": "Save Order + Q&A to Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "hXffw1APyxD2Mt9i",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "New Form Response": {
+      "main": [
+        [
+          {
+            "node": "Answer Customer Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Customer Question": {
+      "main": [
+        [
+          {
+            "node": "Save Order + Q&A to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer Customer Question",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch FAQ Data": {
+      "ai_tool": [
+        [
+          {
+            "node": "Answer Customer Question",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b4b92d35-9594-4b27-8fa7-8ec89137e392",
+  "meta": {
+    "instanceId": "87dcba0509563002ddfd7815c02e139f57ebab7999164e3e8c0ba9982099e9da"
+  },
+  "id": "ZjQ9bL6TXpnoDxDW",
+  "tags": []
+}
