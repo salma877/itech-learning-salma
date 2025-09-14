@@ -9,24 +9,37 @@ This repository documents my weekly progress during the internship, covering **m
 
 ## 📂 Folder Structure
 
-Week1/
-├── Notebooks/
-│ ├── Heart/
-│ ├── Loan_Supabase/
-│ ├── Supabase_Trial/
-│ └── Titanic/
-└── Workflows/
-├── Daily Task Emailer AI/
-└── Daily Task Emailer/
+Week1/  
+├── Notebooks/  
+│   ├── Heart/  
+│   ├── Loan_Supabase/  
+│   ├── Supabase_Trial/  
+│   └── Titanic/  
+└── Workflows/  
+    ├── Daily Task Emailer AI/  
+    └── Daily Task Emailer/  
 
-Week2/
-├── Notebooks/
-│ ├── FAQ_Bot_Embedding/
-│ └── Simulate_WhatsApp_Messages/
-└── Workflows/
-├── FAQ_Bot/
-├── Order & FAQ Automation_FlowerStore/
-└── Telegram_AI_Assitant/
+Week2/  
+├── Notebooks/  
+│   ├── FAQ_Bot_Embedding/  
+│   └── Simulate_WhatsApp_Messages/  
+└── Workflows/  
+    ├── FAQ_Bot/  
+    ├── Order & FAQ Automation_FlowerStore/  
+    └── Telegram_AI_Assitant/  
+
+Week3/  
+├── Notebooks/  
+│   ├── Telgram_ai_bot_python/  
+│   │   ├── telegram_ai_assistant_with_supabase.ipynb  
+│   │   └── telegram_ai_sop.md  
+│   └── Telgram_ai_bot_python+chache/  
+│       └── telegram_ai_assistant_with_supabase+chache.ipynb  
+└── Workflows/  
+    ├── Error_handling/  
+    │   └── Error Monitoring & Notifications.json  
+    └── Sales_data_engine/  
+        └── Sales Data Engine — CSV to Supabase.json  
 
 ---
 
@@ -57,5 +70,17 @@ Week2/
 
 ---
 
-📌 *This repo will be updated weekly to reflect my ongoing work at iTech Solutions.*  
+### 🔹 Week 3 (Days 15–21) — Advanced Workflows & Error Handling
+- **Day 15 – GitHub Collaboration & Pull Requests** → Forked an open-source n8n/Supabase repo, created a feature branch, opened a Pull Request, and documented PR steps.  
+- **Day 16 – Supabase Schema Design (Leads & Conversations)** → Designed schema for `leads` and `conversations` tables with RLS enabled. Deliverable: SQL schema + screenshots.  
+- **Day 17 – WhatsApp AI Assistant (Lite Version)** → Built sandbox WhatsApp AI Assistant using Evolution API simulation. Logged messages & AI responses into Supabase.  
+- **Day 18 – Sales Data Engine (Prototype)** → Created workflow to process uploaded PDF/Excel files, extract structured sales data, and store in Supabase.  
+- **Day 19 – Performance & Cost Optimization** → Researched token usage reduction strategies. Implemented batching/caching in WhatsApp Assistant Lite.  
+- **Day 20 – Monitoring & Error Handling** → Added error handling in n8n, logged errors into `error_logs` table, and sent error notifications to Google Sheets/email.  
+- **Day 21 – Weekly Demo & Report** → Recorded Loom demo (5–7 mins) showing WhatsApp Lite Assistant, Sales Data Engine, error handling & optimization. Wrote 2–3 page report *“From Sandbox to Production – How iTech AI Workflows Can Scale.”*  
 
+✅ **Outcome**: Delivered sandbox AI assistant, sales data engine prototype, schema design, optimization, and robust error handling — all tied together with GitHub collaboration and documentation.  
+
+---
+
+📌 *This repo will be updated weekly to reflect my ongoing work at iTech Solutions.*  
