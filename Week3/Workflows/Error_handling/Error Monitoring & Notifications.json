@@ -1,0 +1,124 @@
+{
+  "name": "Error Monitoring & Notifications",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "38cf6f5f-866e-4f62-87c9-fcc1e86db0f3",
+      "name": "Catch Workflow Errors",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [\n  {\n    json: {\n      workflow_name: $json.workflow ? $json.workflow.name : \"Unknown Workflow\",\n      error_message: $json.error ? $json.error.message : \"No error message\",\n      error_stack: $json.error ? $json.error.stack : \"No stack trace\",\n      error_time: new Date().toISOString()\n    }\n  }\n];\n"
+      },
+      "id": "3e9ff410-6517-4ad5-9d38-f7c7b6ff09f7",
+      "name": "Prepare Error Payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://exolwscmvmqfjeovnslb.supabase.co/rest/v1/error_logs",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"workflow_name\": \"{{$json.workflow_name}}\",\n  \"error_message\": \"{{$json.error_message}}\",\n  \"error_time\": \"{{$json.error_time}}\"\n}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        112,
+        384
+      ],
+      "id": "212c3337-9c84-40bb-aaef-91222c5349cd",
+      "name": "Log Error to Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "UWZEASCUV238MRH2",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "salmaazoz221@gmail.com",
+        "subject": "=❌ Error in {{$json.workflow_name}}",
+        "message": "=Message: {{$json.error_message}} Time: {{$json.error_time}} Stack: {{$json.error_stack}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        96,
+        176
+      ],
+      "id": "c057b03c-9a9b-42ca-b679-9c053caabc13",
+      "name": "Send Error Notification Email",
+      "webhookId": "97e59003-5f56-4460-81c7-59fc0e0aacff",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "e5QQX14eLhXCEwy8",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Catch Workflow Errors": {
+      "main": [
+        [
+          {
+            "node": "Prepare Error Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Error Payload": {
+      "main": [
+        [
+          {
+            "node": "Send Error Notification Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Error to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Error Notification Email": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9a29dd0d-2c64-44a4-bb42-8f715c609277",
+  "meta": {
+    "instanceId": "3b1196f62f094345768fc36ff00c630e2ce0f246e0aa83459bc00f26cab9b17c"
+  },
+  "id": "69Fk4bkSeA4sesWQ",
+  "tags": []
+}
