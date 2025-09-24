@@ -1,0 +1,259 @@
+{
+  "name": "Webhook - Evolution Sim",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deee69d6-a211-415b-809c-1b5a9ccb9d05",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -496,
+        0
+      ],
+      "id": "e554d85b-45df-4676-84d4-b1c3cc6c5334",
+      "name": "Incoming Message Webhook",
+      "webhookId": "deee69d6-a211-415b-809c-1b5a9ccb9d05"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "afe442f7-41e9-4207-8bb4-86c0e4a3b9a8",
+              "name": "message_id",
+              "value": "={{ $json.body.message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "7c175bad-ff4e-465c-b22e-6da69e329997",
+              "name": "sender",
+              "value": "={{ $json.body.sender }}",
+              "type": "string"
+            },
+            {
+              "id": "dc6884dd-ecdf-4ed2-b389-9d628975ca2a",
+              "name": "receiver",
+              "value": "={{ $json.body.receiver }}",
+              "type": "string"
+            },
+            {
+              "id": "4959261c-cf60-48b8-a8c2-ab1fdbe0cfbd",
+              "name": "content",
+              "value": "={{ $json.body.content }}",
+              "type": "string"
+            },
+            {
+              "id": "ee4badc8-0800-4cc4-bd04-186e2c80d178",
+              "name": "timestamp",
+              "value": "={{ $json.body.timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "20bb322f-60aa-4f0e-b2ea-160e8e9efda8",
+              "name": "conversation_id",
+              "value": "={{ $json.body.conversation_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -288,
+        0
+      ],
+      "id": "1d4d1341-7da2-43b9-a5ca-76bbe6f2024c",
+      "name": "Prepare Message Payload"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "message_events"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "90c94219-6372-4be1-bd9c-807c05183ec1",
+      "name": "Check Existing Messages",
+      "credentials": {
+        "supabaseApi": {
+          "id": "UWZEASCUV238MRH2",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d9aad316-8ded-438f-aba7-c45b268333fa",
+              "leftValue": "={{ $items(\"Check Existing Messages\").length === 0 }}\n",
+              "rightValue": "=",
+              "operator": {
+                "type": "boolean",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        128,
+        0
+      ],
+      "id": "e46b9d02-ee0f-40b0-b875-99d36df06cc5",
+      "name": "Is Not Duplicate?"
+    },
+    {
+      "parameters": {
+        "tableId": "message_events",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "conversation_id",
+              "fieldValue": "={{ $('Prepare Message Payload').item.json.conversation_id }}"
+            },
+            {
+              "fieldId": "role",
+              "fieldValue": "'user'"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('Prepare Message Payload').item.json.content }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $('Prepare Message Payload').item.json.timestamp }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        336,
+        -96
+      ],
+      "id": "9b63886c-f126-48ab-9182-313232668e7f",
+      "name": "Insert New Message",
+      "credentials": {
+        "supabaseApi": {
+          "id": "UWZEASCUV238MRH2",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "69Fk4bkSeA4sesWQ",
+          "mode": "list",
+          "cachedResultName": "Error Monitoring & Notifications"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        336,
+        96
+      ],
+      "id": "484c63f8-a9db-4cc1-89b1-a83752d09189",
+      "name": "Call Error Monitoring & Notifications"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Incoming Message Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Message Payload": {
+      "main": [
+        [
+          {
+            "node": "Check Existing Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Messages": {
+      "main": [
+        [
+          {
+            "node": "Is Not Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Not Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Insert New Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Error Monitoring & Notifications",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "errorWorkflow": "69Fk4bkSeA4sesWQ"
+  },
+  "versionId": "fca1e8a8-175d-49a2-bb58-457b78b0e887",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3b1196f62f094345768fc36ff00c630e2ce0f246e0aa83459bc00f26cab9b17c"
+  },
+  "id": "dRzYVTTSsdkcbSQp",
+  "tags": []
+}

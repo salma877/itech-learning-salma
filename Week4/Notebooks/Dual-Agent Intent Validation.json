@@ -1,0 +1,582 @@
+{
+  "name": "Dual-Agent Intent Validation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "iwaa-intent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -576,
+        0
+      ],
+      "id": "1552b188-2c23-4a97-8909-c9716a101895",
+      "name": "Webhook - Receive User Message",
+      "webhookId": "ddc848ea-26ce-4e4d-a5cb-efd5af80da1f"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-1.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Classify the following user message into one of these categories:\n- FAQ (general informational question)\n- Booking (request to schedule or reserve)\n- Lead (sharing personal/contact details for follow-up)\n- Other (anything outside these categories)\n\nReply ONLY with the category name: FAQ, Booking, Lead, or Other.\n\nUser message: {{$json[\"body\"][\"message\"]}}\n",
+              "role": "model"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        0
+      ],
+      "id": "43a653e1-18fc-42b3-a5a8-2eb4aa778e62",
+      "name": "LLM - Classify Intent",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "fMJIu73vhdB5arRK",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0313216c-00af-4c6a-979b-bd7188d0267d",
+              "name": "intent_clean",
+              "value": "={{ $json[\"content\"][\"parts\"][0][\"text\"].replace(/[^a-zA-Z]/g,\"\").trim().toUpperCase() }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "e91adb7a-185a-4ef2-8021-d182b939f436",
+      "name": "Raw Intent"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: { \"content\": { \"parts\": [ { \"text\": \"FAQ\\n```\\n\" } ] } }\n// Output: { \"intent_clean\": \"FAQ\" }\n\nreturn $input.all().map(item => {\n  const raw = item.json.intent_clean || item.json.content?.parts?.[0]?.text || \"\";\n\n  // Remove everything except letters, trim, and uppercase\n  const cleaned = raw.replace(/[^a-zA-Z]/g, \"\").trim().toUpperCase();\n\n  return {\n    json: {\n      ...item.json,\n      intent_clean: cleaned\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        0
+      ],
+      "id": "3b19c737-c7d8-40e9-b1ae-f57eb09b556e",
+      "name": "Clean Intent"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent_clean }}",
+                    "rightValue": "=FAQ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7af17810-7a40-4a7c-b66c-a9071e0722b4"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FAQ Branch"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7a5acb05-4bb3-4f1f-879a-f27b7c877a69",
+                    "leftValue": "={{ $json.intent_clean }}",
+                    "rightValue": "BOOKING",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Booking Branch"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4f54b8d7-0e68-4cf1-84d8-1f5d0d2e9277",
+                    "leftValue": "={{ $json.intent_clean }}",
+                    "rightValue": "LEAD",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Lead Branch"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c5fef595-8f7a-4d76-a9ff-c6948b5f66ef",
+                    "leftValue": "={{ $json.intent_clean }}",
+                    "rightValue": "OTHER",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Other Branch"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        320,
+        0
+      ],
+      "id": "bb184d4c-6f58-47a0-bcdf-16820665ec24",
+      "name": "Switch - Route Workflow by Intent"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-1.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an FAQ assistant. Answer the user’s question briefly and clearly.\nQuestion:{{ $('Webhook - Receive User Message').item.json.body.message }}\n",
+              "role": "model"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        528,
+        -176
+      ],
+      "id": "f50b19e2-b875-4bdd-b0be-f5de32811d7d",
+      "name": "LLM - FAQ Answer",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "fMJIu73vhdB5arRK",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        784,
+        -176
+      ],
+      "id": "298c8def-310c-4dee-8d60-1f31b32f454d",
+      "name": "Respond - FAQ"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fe8cf42e-a338-4570-b274-cf0eef9564b6",
+              "name": "Name",
+              "value": "={{ $('Webhook - Receive User Message').item.json.body.message.match(/name is (\\w+)/i) ? $('Webhook - Receive User Message').item.json.body.message.match(/name is (\\w+)/i)[1] : \"\" }}\n",
+              "type": "string"
+            },
+            {
+              "id": "c629747e-b0bd-49de-ab6f-f09808151bae",
+              "name": "Email",
+              "value": "={{ $('Webhook - Receive User Message').item.json.body.message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-z]{2,}/i) ? $('Webhook - Receive User Message').item.json.body.message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-z]{2,}/i)[0] : \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        96
+      ],
+      "id": "c81e0df0-67c1-4f28-a93e-b94a018b2101",
+      "name": "Extract Lead Info"
+    },
+    {
+      "parameters": {
+        "tableId": "leads",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.Name }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.Email }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        736,
+        112
+      ],
+      "id": "ee30375c-51b6-41e5-90c0-c8f55312bf72",
+      "name": "Insert Lead",
+      "credentials": {
+        "supabaseApi": {
+          "id": "UWZEASCUV238MRH2",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9719b151-c9f6-4620-8653-b7b335263144",
+              "name": "service",
+              "value": "={{ $('Webhook - Receive User Message').item.json.body.message.match(/book a (\\w+)/i) ? $('Webhook - Receive User Message').item.json.body.message.match(/book a (\\w+)/i)[1] : \"Booking\" }}",
+              "type": "string"
+            },
+            {
+              "id": "394e9887-ca2d-42c8-848a-ab0dd6f52c4a",
+              "name": "Date",
+              "value": "={{ $('Webhook - Receive User Message').item.json.body.message.match(/\\d{1,2}\\/\\d{1,2}\\/\\d{4}/) ? $('Webhook - Receive User Message').item.json.body.message.match(/\\d{1,2}\\/\\d{1,2}\\/\\d{4}/)[0] : \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "84776a26-c8cd-4b81-a568-ac13e817abf0",
+              "name": "Time",
+              "value": "={{ $('Webhook - Receive User Message').item.json.body.message.match(/\\b\\d{1,2}(?::\\d{2})?\\s?(am|pm)\\b/i) ? $('Webhook - Receive User Message').item.json.body.message.match(/\\b\\d{1,2}(?::\\d{2})?\\s?(am|pm)\\b/i)[0] : \"10:00am\" }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        -48
+      ],
+      "id": "8ba8877f-0e74-404b-a7f6-4dc5e3fe2cb1",
+      "name": "Extract Booking Details"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $('Webhook - Receive User Message').first().json.body.message; // <-- fixed\n\nconst serviceMatch = msg.match(/book a (\\w+)/i);\nconst dateMatch = msg.match(/\\d{1,2}\\/\\d{1,2}\\/\\d{4}/);\nconst timeMatch = msg.match(/\\b\\d{1,2}(?::\\d{2})?\\s?(am|pm)\\b/i);\n\n// Parse values (with or without defaults)\nconst service = serviceMatch ? serviceMatch[1] : \"Booking\";\nconst dateStr = dateMatch ? dateMatch[0] : \"10/10/2025\";\nconst timeStr = timeMatch ? timeMatch[0].toLowerCase() : \"10:00am\";\n\nconst parts = dateStr.split(\"/\");\nlet [h,m] = timeStr.match(/\\d+/g);\nm = m || \"00\";\nh = parseInt(h);\nif(timeStr.includes(\"pm\") && h < 12) h += 12;\nif(timeStr.includes(\"am\") && h === 12) h = 0;\n\nconst start = new Date(`${parts[2]}-${parts[0].padStart(2,\"0\")}-${parts[1].padStart(2,\"0\")}T${h.toString().padStart(2,\"0\")}:${m}:00`);\nconst iso_datetime = start.toISOString();\n\n// End datetime (+1 hour)\nstart.setHours(start.getHours() + 1);\nconst iso_end_datetime = start.toISOString();\n\nreturn [{\n  service,\n  date: dateStr,\n  time: timeStr,\n  iso_datetime,\n  iso_end_datetime,\n  message: msg\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        -48
+      ],
+      "id": "de98add7-9ae9-4950-afb1-838d87c36ad7",
+      "name": "Format ISO Datetimes"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "salmaazoz63@gmail.com",
+          "mode": "list",
+          "cachedResultName": "salmaazoz63@gmail.com"
+        },
+        "start": "={{ $json.iso_datetime }}",
+        "end": "={{ $json.iso_end_datetime }}",
+        "additionalFields": {
+          "description": "={{ $json.message }}",
+          "summary": "={{ $json.service }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        992,
+        -48
+      ],
+      "id": "54110edc-76b5-4522-8279-463108c80f8e",
+      "name": "Create Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "GH8jqdiNESDzfRp0",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-1.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an FAQ assistant. Answer the user’s question briefly and clearly.\nQuestion:{{ $('Webhook - Receive User Message').item.json.body.message }}\n",
+              "role": "model"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        496,
+        384
+      ],
+      "id": "6bab2711-28b1-45a8-a710-2caaac9fd74d",
+      "name": "Handle Other",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "fMJIu73vhdB5arRK",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        784,
+        400
+      ],
+      "id": "290e61d9-43b8-4c45-9c01-2d6f0b4100e0",
+      "name": "respond other"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Receive User Message": {
+      "main": [
+        [
+          {
+            "node": "LLM - Classify Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM - Classify Intent": {
+      "main": [
+        [
+          {
+            "node": "Raw Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Raw Intent": {
+      "main": [
+        [
+          {
+            "node": "Clean Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Intent": {
+      "main": [
+        [
+          {
+            "node": "Switch - Route Workflow by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Route Workflow by Intent": {
+      "main": [
+        [
+          {
+            "node": "LLM - FAQ Answer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Booking Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Lead Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Other",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM - FAQ Answer": {
+      "main": [
+        [
+          {
+            "node": "Respond - FAQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Lead Info": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Booking Details": {
+      "main": [
+        [
+          {
+            "node": "Format ISO Datetimes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format ISO Datetimes": {
+      "main": [
+        [
+          {
+            "node": "Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Other": {
+      "main": [
+        [
+          {
+            "node": "respond other",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e040a0f7-cd70-41b4-8b9f-f63618aaf73d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3b1196f62f094345768fc36ff00c630e2ce0f246e0aa83459bc00f26cab9b17c"
+  },
+  "id": "ZMBPDKQJ1lI6yVo4",
+  "tags": []
+}

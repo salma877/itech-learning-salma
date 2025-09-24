@@ -1,0 +1,356 @@
+{
+  "name": "Sales Data Engine  V2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        128
+      ],
+      "id": "07d1d2b5-a9b3-428b-9fae-8af5e686b11b",
+      "name": "Daily Schedule (7 AM)"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "sales_data.csv",
+        "limit": 1,
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        128,
+        144
+      ],
+      "id": "10022d65-c5c6-4630-8565-908a0fc8ea0a",
+      "name": "Find Sales CSV in Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r0MBK33AyVygyMTU",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "=1bZ5QRij5K0_wgl00aSIsuYH4hap3A4FD",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        336,
+        144
+      ],
+      "id": "986fac73-21dc-4825-b887-7866e2d8c608",
+      "name": "Download Sales CSV",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r0MBK33AyVygyMTU",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        544,
+        144
+      ],
+      "id": "6c20e97b-2eac-4e6b-acb1-962d8cbc7b4f",
+      "name": "Parse Sales Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const amount = parseFloat(item.json.Amount);\n\n  const vat = amount * 0.14;\n\n \n  const total = amount + vat;\n\n\n  item.json.VAT = vat;\n  item.json.Total = total;\n\n \n  item.json.Date = new Date(item.json.Date).toISOString().split(\"T\")[0];\n\n  return item;\n});\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        32
+      ],
+      "id": "7948543d-bdb6-4856-8eca-20cf00729554",
+      "name": "Calculate VAT & Total"
+    },
+    {
+      "parameters": {
+        "tableId": "sales_data",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "invoice_id",
+              "fieldValue": "={{ $json.InvoiceID }}"
+            },
+            {
+              "fieldId": "date",
+              "fieldValue": "={{ $json.Date }}"
+            },
+            {
+              "fieldId": "amount",
+              "fieldValue": "={{ $json.Amount }}"
+            },
+            {
+              "fieldId": "vat",
+              "fieldValue": "={{ $json.VAT }}"
+            },
+            {
+              "fieldId": "total",
+              "fieldValue": "={{ $json.Total }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        16
+      ],
+      "id": "d88283c5-8e96-4f35-ade4-a2cff1fb7307",
+      "name": "Insert Invoice into Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "UWZEASCUV238MRH2",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map((item, index, arr) => {\n  const row = item.json;\n  const required = [\"InvoiceID\", \"Date\", \"Amount\"];\n  const missing = required.filter(f => !row[f] || row[f].toString().trim() === \"\");\n\n  let error_message = null;\n  let category = null;\n\n  // Schema mismatch check\n  if (missing.length > 0) {\n    error_message = `Missing fields: ${missing.join(\", \")}`;\n    category = \"schema_mismatch\";\n  }\n  // Parse error check\n  else if (isNaN(parseFloat(row.Amount)) || isNaN(Date.parse(row.Date))) {\n    error_message = \"Invalid data format (parse error)\";\n    category = \"parse_error\";\n  }\n  // Negative or zero amount check\n  else if (parseFloat(row.Amount) <= 0) {\n    error_message = `Invalid Amount: ${row.Amount}`;\n    category = \"parse_error\";\n  }\n  // Duplicate check (look only at previous rows)\n  else {\n    const currentId = String(row.InvoiceID).trim().toLowerCase();\n    const duplicateFound = arr.slice(0, index).some(\n      other => String(other.json.InvoiceID).trim().toLowerCase() === currentId\n    );\n    if (duplicateFound) {\n      error_message = `Duplicate InvoiceID: ${row.InvoiceID}`;\n      category = \"duplicate\";\n    }\n  }\n\n  return {\n    json: {\n      ...row,\n      isValid: error_message === null,\n      error_message,\n      category,\n      raw_data: row  // <-- store the original row here\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        144
+      ],
+      "id": "399f0ee3-f391-4a8f-b290-a2d565da8364",
+      "name": "Validate Sales Data",
+      "alwaysOutputData": true,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.isValid}}",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "db26577d-5a1c-4c1d-ba53-c95267444b87"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "valid"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "337852d3-287c-4dd1-ae81-97f7ab18abfa",
+                    "leftValue": "={{$json.isValid}}",
+                    "rightValue": "false",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "invalid"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        960,
+        144
+      ],
+      "id": "150c40bf-9e4a-4e21-93ae-a3f1ff283a4e",
+      "name": "Route Valid vs Invalid"
+    },
+    {
+      "parameters": {
+        "tableId": "errors_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "category",
+              "fieldValue": "={{ $json.category }}"
+            },
+            {
+              "fieldId": "error_message",
+              "fieldValue": "={{ $json.error_message }}"
+            },
+            {
+              "fieldId": "raw_data",
+              "fieldValue": "={{ $json.raw_data }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        224
+      ],
+      "id": "7b8fa5f4-3d4b-48bd-849a-f336913ccd03",
+      "name": "Log Errors to Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "UWZEASCUV238MRH2",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Schedule (7 AM)": {
+      "main": [
+        [
+          {
+            "node": "Find Sales CSV in Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Sales CSV in Drive": {
+      "main": [
+        [
+          {
+            "node": "Download Sales CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Sales CSV": {
+      "main": [
+        [
+          {
+            "node": "Parse Sales Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Sales Data": {
+      "main": [
+        [
+          {
+            "node": "Validate Sales Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate VAT & Total": {
+      "main": [
+        [
+          {
+            "node": "Insert Invoice into Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Sales Data": {
+      "main": [
+        [
+          {
+            "node": "Route Valid vs Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Valid vs Invalid": {
+      "main": [
+        [
+          {
+            "node": "Calculate VAT & Total",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Errors to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d5130160-bc23-46e4-a5cb-c41d4b8e8b03",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3b1196f62f094345768fc36ff00c630e2ce0f246e0aa83459bc00f26cab9b17c"
+  },
+  "id": "Om50z29Adgw3SNaH",
+  "tags": []
+}
