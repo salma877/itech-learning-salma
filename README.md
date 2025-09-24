@@ -41,6 +41,21 @@ Week3/
     └── Sales_data_engine/  
         └── Sales Data Engine — CSV to Supabase.json  
 
+Week4/  
+├── Notebooks/  
+│   ├── Dual-Agent Intent Validation v2.json  
+│   ├── Dual-Agent Intent Validation.json  
+│   ├── Sales Data Engine V2.json  
+│   └── Webhook - Evolution Sim (1).json  
+└── day28_pilot_pack/  
+    ├── .env  
+    ├── LoadTest_Report.pdf  
+    ├── load_test.py  
+    ├── requirements.txt  
+    ├── results/  
+    │   └── results.csv  
+    └── runbook.pdf  
+
 ---
 
 ## 📘 Internship Progress
@@ -80,6 +95,19 @@ Week3/
 - **Day 21 – Weekly Demo & Report** → Recorded Loom demo (5–7 mins) showing WhatsApp Lite Assistant, Sales Data Engine, error handling & optimization. Wrote 2–3 page report *“From Sandbox to Production – How iTech AI Workflows Can Scale.”*  
 
 ✅ **Outcome**: Delivered sandbox AI assistant, sales data engine prototype, schema design, optimization, and robust error handling — all tied together with GitHub collaboration and documentation.  
+
+---
+
+### 🔹 Week 4 (Days 22–28) — Scaling & Load Testing
+- **Day 22 – Supabase Schema Enhancements** → Extended schema with indexes & refined RLS for better query performance and data security.  
+- **Day 23 – Webhook Ingestion Workflow** → Built n8n webhook ingestion with retry + deduplication logic, ensuring reliable event capture.  
+- **Day 24 – Dual-Agent Intent Validation** → Designed a validator workflow with branching for FAQ, Booking, Lead capture, and fallback categories.  
+- **Day 25 – Optimization with Caching** → Implemented caching layer (Redis) to reduce latency and optimize token usage in AI workflows.  
+- **Day 26 – Sales Data Engine (V2)** → Enhanced ingestion pipeline to parse CSV/Excel/PDF files, validate schema, log errors, and store clean data in Supabase.  
+- **Day 27 – Monitoring Dashboard** → Created Looker Studio dashboard showing message volumes, intents, errors, and before/after caching metrics.  
+- **Day 28 – Load Test & Pilot Pack** → Performed load testing (50–100 concurrent chat sessions). Packaged Pilot Readiness Kit: repo structure, `.env` sample, runbook, load test report, and Loom demo.  
+
+✅ **Outcome**: Delivered production-ready workflows with schema optimization, reliable ingestion, caching, monitoring dashboards, and stress-tested load performance — packaged into a full Pilot Readiness Kit.  
 
 ---
 
