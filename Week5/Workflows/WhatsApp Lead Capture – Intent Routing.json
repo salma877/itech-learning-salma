@@ -1,0 +1,448 @@
+{
+  "name": "WhatsApp Lead Capture – Intent Routing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "df045e8b-fe56-4698-83de-9badd43d0b32",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1248,
+        -128
+      ],
+      "id": "967a3e38-9b00-4918-8450-ea7eb917c50e",
+      "name": "Receive WhatsApp Message",
+      "webhookId": "df045e8b-fe56-4698-83de-9badd43d0b32"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const outerBody = item.json.body || {};        // the top-level \"body\" from webhook\n  const innerBody = outerBody.body || outerBody; // if message is nested in body.body, use it\n\n  const parsed = innerBody.parsed || {};\n  const name = parsed.name || null;\n  const phone = parsed.phone || outerBody.from || null; // phone may be in parsed or in outer 'from'\n  const service_interest = parsed.service_interest || null;\n  const raw_message = innerBody.message || outerBody.message || null;\n\n  return {\n    json: {\n      name,\n      phone,\n      service_interest,\n      raw_message\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        -128
+      ],
+      "id": "988f3836-9ce5-4342-b261-612c6c8fecaa",
+      "name": "Map Lead Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Classify Intent code for n8n Code node\nreturn items.map(item => {\n  const raw = (item.json.raw_message || \"\").toString().toLowerCase();\n  const interest = (item.json.service_interest || \"\").toString().toLowerCase();\n\n  // keyword sets (expand later if you want)\n  const salesKeywords = [\"buy\",\"price\",\"purchase\",\"cost\",\"order\",\"demo\",\"quote\",\"pricing\",\"subscribe\",\"price list\"];\n  const supportKeywords = [\"help\",\"issue\",\"problem\",\"error\",\"not working\",\"support\",\"refund\",\"cancel\",\"return\",\"bug\",\"complaint\"];\n\n  // simple match\n  let intent = \"General Inquiry\";\n  for (const k of salesKeywords) if (raw.includes(k) || interest.includes(k)) { intent = \"Sales\"; break; }\n  if (intent === \"General Inquiry\") {\n    for (const k of supportKeywords) if (raw.includes(k)) { intent = \"Support\"; break; }\n  }\n\n  return {\n    json: {\n      ...item.json,\n      intent\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        -112
+      ],
+      "id": "ae3d8536-b8f0-450e-b593-552beeb277dc",
+      "name": "Classify Intent"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "Sales",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "fc4c551e-b888-4560-af64-a3f598ff5cdf"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sales"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "49cd9afb-d6af-4a4d-805f-1855b1b8f015",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "Support",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "support"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d5fb0ac9-e9d0-42c5-8c2f-196577731894",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "General Inquiry",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "General Inquiry"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -304,
+        -112
+      ],
+      "id": "be8d2578-55e4-4c50-9244-f016502e0fb4",
+      "name": "Route by Intent"
+    },
+    {
+      "parameters": {
+        "tableId": "leads",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{ $json.phone }}"
+            },
+            {
+              "fieldId": "service_interest",
+              "fieldValue": "={{ $json.service_interest }}"
+            },
+            {
+              "fieldId": "raw_message",
+              "fieldValue": "={{ $json.raw_message }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -768,
+        -112
+      ],
+      "id": "bdb876af-64b2-4a52-8bf7-8339b9ba536d",
+      "name": "Insert Lead",
+      "credentials": {
+        "supabaseApi": {
+          "id": "A8OZ6U1k9IdDGv9G",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1BAMPyAwINAdsdgQEPsGeHe0Uf0GC-lu8HcRjs8dXp24",
+          "mode": "list",
+          "cachedResultName": "SalesLeads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1BAMPyAwINAdsdgQEPsGeHe0Uf0GC-lu8HcRjs8dXp24/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1BAMPyAwINAdsdgQEPsGeHe0Uf0GC-lu8HcRjs8dXp24/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Phone": "={{ $json.phone }}",
+            "Service Interest": "={{ $json.service_interest }}",
+            "Message": "={{ $json.raw_message }}",
+            "Intent": "={{ $json.intent }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Service Interest",
+              "displayName": "Service Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Intent",
+              "displayName": "Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        176,
+        -208
+      ],
+      "id": "cebb5d8b-5682-413b-a250-8fc8effef4c4",
+      "name": "Append Lead to Google Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SvQcSCEgeseF0dO7",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "salmaazoz221@gmail.com",
+        "subject": "= New Sales Lead from :{{ $json.Name }}",
+        "message": "=<h2>📩 New Sales Lead Received</h2>\n<p><strong>Name:</strong> {{$json.Name}}</p>\n<p><strong>Phone:</strong> {{$json.Phone}}</p>\n<p><strong>Service Interest:</strong> {{ $json['Service Interest'] }}</p>\n<p><strong>Message:</strong>{{ $json.Message }} /p>\n<hr>\n<p>➡ Please follow up with this lead as soon as possible.</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        320,
+        -320
+      ],
+      "id": "9f9d5e57-e29b-4d23-8012-c853a8ff3d63",
+      "name": "Send Sales Lead Alert",
+      "webhookId": "8428a812-1737-48d1-ab8d-7e8794bdbcc2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "p0mMJG1UkbLQdIku",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "support_tickets",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{ $json.phone }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $json.raw_message }}"
+            },
+            {
+              "fieldId": "intent",
+              "fieldValue": "={{ $json.intent }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -64
+      ],
+      "id": "8c8d021a-7c91-4b31-89ff-238c5ff9c990",
+      "name": "Insert Support Ticket",
+      "credentials": {
+        "supabaseApi": {
+          "id": "A8OZ6U1k9IdDGv9G",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"Thanks {{$json.name}}! We’ve captured your interest in {{$json.service_interest}} services. Our team will contact you shortly.\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        592,
+        160
+      ],
+      "id": "36fe0372-477b-4b90-9eba-e102043166ac",
+      "name": "Acknowledge General Inquiry"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Map Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Intent": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Append Lead to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert Support Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Acknowledge General Inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Lead": {
+      "main": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Lead to Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Send Sales Lead Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Sales Lead Alert": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1e1a2428-ad20-4c82-b379-e05982402973",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2988c879c91b7110549ac1fd40f0dcca4be668b02df3f69397c94714c2b91028"
+  },
+  "id": "RsqRkeC1VgZhBIIT",
+  "tags": []
+}

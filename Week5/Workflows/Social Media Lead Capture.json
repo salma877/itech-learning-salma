@@ -1,0 +1,121 @@
+{
+  "name": "Social Media Lead Capture",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "364185e3-5c3f-4e16-a4e5-bdbb8a8dfb0e",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -464,
+        -32
+      ],
+      "id": "2aefdf07-56b2-432d-8c98-c329dd765c47",
+      "name": "Social Lead Form",
+      "webhookId": "364185e3-5c3f-4e16-a4e5-bdbb8a8dfb0e"
+    },
+    {
+      "parameters": {
+        "jsCode": "let data = $json[\"body\"]; // <-- take only form data\nlet tags = [];\n\n// Auto-tag by source\nif(data.source === \"Instagram\") tags.push(\"Social\");\nif(data.source === \"Facebook\") tags.push(\"Social\");\n\n// Auto-tag by service interest\nif(data.service_interest) tags.push(data.service_interest + \" Lead\");\n\n// Auto-tag by keywords in message\nif(data.message && data.message.toLowerCase().includes(\"urgent\")) {\n  tags.push(\"High Priority\");\n}\n\nreturn [{ ...data, tags: tags.join(\",\") }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        -32
+      ],
+      "id": "af63abc2-a282-462f-a422-c6cc0a352352",
+      "name": "Auto-Tag Lead"
+    },
+    {
+      "parameters": {
+        "tableId": "leads_capture",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{ $json.phone }}"
+            },
+            {
+              "fieldId": "service_interest",
+              "fieldValue": "={{ $json.service_interest }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $json.message }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "={{ $json.source }}"
+            },
+            {
+              "fieldId": "tags",
+              "fieldValue": "={{ $json.tags }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -32
+      ],
+      "id": "097ef39d-ed16-4f41-adcf-c605497dc7bf",
+      "name": "Insert Lead",
+      "credentials": {
+        "supabaseApi": {
+          "id": "A8OZ6U1k9IdDGv9G",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Social Lead Form": {
+      "main": [
+        [
+          {
+            "node": "Auto-Tag Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-Tag Lead": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "262329d5-74c2-40de-b973-812255fcb573",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2988c879c91b7110549ac1fd40f0dcca4be668b02df3f69397c94714c2b91028"
+  },
+  "id": "cSjTZYzxOeuBCdvw",
+  "tags": []
+}

@@ -1,0 +1,936 @@
+{
+  "name": "Full pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "c3ce69ba-37e1-4563-9af3-f399fb96e1db",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -5120,
+        -720
+      ],
+      "id": "4df4cb30-94bc-499f-811c-13430d679da1",
+      "name": "Receive WhatsApp Message",
+      "webhookId": "c3ce69ba-37e1-4563-9af3-f399fb96e1db"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle both form-data and JSON body\nconst body = $json.body || $json;\n\nreturn [\n  {\n    json: {\n      name: body.name || null,\n      email: body.email || null,\n      phone: body.phone || null,\n      service_interest: body.service_interest || null,\n      message: body.message || null,\n      source: body.source || \"Unknown\"\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4896,
+        -704
+      ],
+      "id": "e4c5973f-5e8f-4563-a9b6-be189bb7a036",
+      "name": "Map Lead Data"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2256,
+        -1008
+      ],
+      "id": "a7256c7c-a6c6-47b3-91b5-bafc9d34f331",
+      "name": "Acknowledge User"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a classifier. Classify the following message into one of these categories:\n- Sales\n- Support\n- General Inquiry\n\nMessage: {{$json[\"message\"]}}\n\nReturn only the category.\n",
+              "role": "model"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -4672,
+        -704
+      ],
+      "id": "2e918415-0595-4217-9a1a-c2540ca1a1d1",
+      "name": "Classify_Message",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dCHnWERRARpClyR5",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "FAQ",
+        "key": "=faq:{{ $('Receive WhatsApp Message').item.json.body.body.body.message.toLowerCase().trim() }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -2832,
+        -912
+      ],
+      "id": "e5f5a70e-ac10-455a-8acb-454801b02011",
+      "name": "Lookup_FAQ_Answer",
+      "credentials": {
+        "redis": {
+          "id": "UvY5sEDuCKe4QtWX",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.FAQ }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "d23d5a30-7b80-4b24-9103-e43a564ddd8b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "exist"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3bb1ca91-97eb-453e-9ae2-95f4db2f8b81",
+                    "leftValue": "={{ $json.FAQ }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notExists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "not exist"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -2560,
+        -976
+      ],
+      "id": "d4f2521f-771f-4740-a714-2695c476c308",
+      "name": "Check_FAQ_Exists"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=faq:{{ $('Receive WhatsApp Message').item.json.body.body.body.message.toLowerCase().trim() }}\n",
+        "value": "={{ $json.output }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -2080,
+        -784
+      ],
+      "id": "37f29174-d9cf-4d01-8ad5-aec12bbc5a49",
+      "name": "Store_AI_Answer",
+      "credentials": {
+        "redis": {
+          "id": "UvY5sEDuCKe4QtWX",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Map Lead Data').item.json.raw_message }}",
+        "options": {
+          "systemMessage": "=You are a customer service assistant. Answer user questions clearly and concisely.\n\nInstructions:\n- Only provide the answer text.\n- Do not add greetings, extra commentary, or explanations.\n- Output as JSON with these fields:\n{\n  \"question\": \"<user question>\",\n  \"answer\": \"<answer text>\"\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -2336,
+        -784
+      ],
+      "id": "ba6f3107-932d-44ac-91b6-9d33b8d7c570",
+      "name": "Generate_FAQ_Response"
+    },
+    {
+      "parameters": {
+        "model": "x-ai/grok-4-fast:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -2352,
+        -608
+      ],
+      "id": "51a344a7-f4d7-4e1e-b1cd-5ca617c6c127",
+      "name": "Ai model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "9zhiveWjpzvqg6ej",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.redisTool",
+      "typeVersion": 1,
+      "position": [
+        -2160,
+        -560
+      ],
+      "id": "554079db-6cd1-468a-8592-3eb6eaac665b",
+      "name": "AI_Tool_Redis",
+      "credentials": {
+        "redis": {
+          "id": "UvY5sEDuCKe4QtWX",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "return [\n  {\n    json: {\n      reply: \"Thank you for contacting us 🙏 Our team will get back to you shortly.\"\n    }\n  }\n];\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -3168,
+        -304
+      ],
+      "id": "a92f5987-c743-4823-b341-7f489c648a50",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"reply\": \"Thank you for contacting us 🙏 Our team will get back to you shortly.\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2672,
+        -688
+      ],
+      "id": "3444728a-8c1c-4c40-b6d2-be8a33969ba4",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "jsCode": "let data = $('Receive WhatsApp Message').first().json.body;\nlet tags = [];\nlet score = 0;\n\n// Auto-tag by source\nif (data.source === \"Instagram\" || data.source === \"Facebook\") tags.push(\"Social\");\nif (data.source === \"WhatsApp\") tags.push(\"WhatsApp\");\n\n// Auto-tag by service interest\nif (data.service_interest) tags.push(data.service_interest + \" Lead\");\n\n// Auto-tag by keywords in message\nif (data.message) {\n  let msg = data.message.toLowerCase();\n\n  if (msg.includes(\"urgent\")) {\n    tags.push(\"High Priority\");\n    score += 2;\n  }\n\n  if (msg.includes(\"meeting\")) {\n    tags.push(\"Meeting Request\");\n    score += 1;\n  }\n\n  if (msg.includes(\"budget\")) {\n    tags.push(\"Budget Mentioned\");\n    score += 2;\n  }\n}\n\n// Phone\nif (data.phone) score += 1;\n\n// Email\nif (data.email) score += 1;\n\n// Service interest scoring\nif (data.service_interest === \"Design\") score += 1;\nif (data.service_interest === \"Development\") score += 1;\n\nreturn [{\n  ...data,\n  tags: tags.join(\",\"),\n  score\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4224,
+        -672
+      ],
+      "id": "c362ba22-689c-45b5-b63d-429f6bab777b",
+      "name": "Score & Tag Lead"
+    },
+    {
+      "parameters": {
+        "tableId": "leads_capture",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{ $json.phone }}"
+            },
+            {
+              "fieldId": "service_interest",
+              "fieldValue": "={{ $json.service_interest }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $json.message }}"
+            },
+            {
+              "fieldId": "tags",
+              "fieldValue": "={{ $json.tags }}"
+            },
+            {
+              "fieldId": "score",
+              "fieldValue": "={{ $json.score }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "={{ $json.source }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -4016,
+        -672
+      ],
+      "id": "170b0874-2f18-4bb0-a6e6-646a699f220b",
+      "name": "Insert Lead Row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "A8OZ6U1k9IdDGv9G",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Classify_Message').item.json.content.parts[0].text }}",
+                    "rightValue": "FAQ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "77b0c59e-0696-451a-981c-81b1544a6169"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FAQ"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7c919297-34e6-42a1-ae25-191453ba3c29",
+                    "leftValue": "={{ $('Classify_Message').item.json.content.parts[0].text }}",
+                    "rightValue": "Support",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Support"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "bb2b6aae-2016-4ef1-a339-a92a9c1ef750",
+                    "leftValue": "={{ $('Classify_Message').item.json.content.parts[0].text }}",
+                    "rightValue": "General Inquiry",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "General Inquiry"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -3552,
+        -672
+      ],
+      "id": "174e4ca2-81da-47e1-9f28-66d0c2597665",
+      "name": "Branch_FAQ_or_Support or general"
+    },
+    {
+      "parameters": {
+        "tableId": "support_ticket",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{ $json.phone }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $json.message }}"
+            },
+            {
+              "fieldId": "intent",
+              "fieldValue": "={{ $json.service_interest }}"
+            },
+            {
+              "fieldId": "tags",
+              "fieldValue": "={{ $json.tags }}"
+            },
+            {
+              "fieldId": "score",
+              "fieldValue": "={{ $json.score }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -3264,
+        -592
+      ],
+      "id": "ef55758c-1d54-4f16-9865-e50fc049008e",
+      "name": "Insert Support Ticket",
+      "credentials": {
+        "supabaseApi": {
+          "id": "A8OZ6U1k9IdDGv9G",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.score }}",
+                    "rightValue": 5,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    },
+                    "id": "533310b4-7b2d-4b01-96f6-730dd3cbfe5c"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1a5a5b3f-e359-4bb8-906e-0be6d211060a",
+                    "leftValue": "={{ $json.score }}",
+                    "rightValue": 5,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -3056,
+        -592
+      ],
+      "id": "ae07b8b4-4feb-490e-9c0a-001953b89c11",
+      "name": "Switch: High Priority"
+    },
+    {
+      "parameters": {
+        "sendTo": "salmaazoz221@gmail.com",
+        "subject": "=🚨 High Priority Lead: {{$json.name}} | {{ $json.intent }}",
+        "message": "=Hello Team,  A new high-priority lead has been captured. Please review and follow up as soon as possible.  Lead Details: - Name: {{$json.name}} - Email: {{$json.email || \"Not provided\"}} - Phone: {{$json.phone || \"Not provided\"}} - Service Interest: {{ $json.intent }}- Message: {{$json.message}} - Score: {{$json.score}} - Tags: {{$json.tags}}  Thank you, Your Automated Lead System",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -2848,
+        -496
+      ],
+      "id": "f2fc9926-83e1-453d-b80e-c444b671b9f6",
+      "name": "Notify Team",
+      "webhookId": "d5e8d021-1833-484d-88bc-22506ce8f283",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "p0mMJG1UkbLQdIku",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -1872,
+        -784
+      ],
+      "id": "14650fb5-7410-485b-8dc1-a5c666d06a6c",
+      "name": "Respond to user"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1BbIbQr6OKwEOBbdTevryUB0RaLKbL7yKH-mox_EMx_Y",
+          "mode": "list",
+          "cachedResultName": "leads_capture_rows",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1BbIbQr6OKwEOBbdTevryUB0RaLKbL7yKH-mox_EMx_Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1241737459,
+          "mode": "list",
+          "cachedResultName": "leads_capture_rows",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1BbIbQr6OKwEOBbdTevryUB0RaLKbL7yKH-mox_EMx_Y/edit#gid=1241737459"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "name": "={{ $json.name }}",
+            "email": "={{ $json.email }}",
+            "phone": "={{ $json.phone }}",
+            "service_interest": "={{ $json.service_interest }}",
+            "message": "={{ $json.message }}",
+            "source": "={{ $json.source }}",
+            "tags": "={{ $json.tags }}",
+            "created_at": "={{ $json.created_at }}",
+            "score": "={{ $json.score }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "service_interest",
+              "displayName": "service_interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tags",
+              "displayName": "tags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -3808,
+        -672
+      ],
+      "id": "25014a5b-b2e9-455c-b282-8d02ca5430f2",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SvQcSCEgeseF0dO7",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Map Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Classify_Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify_Message": {
+      "main": [
+        [
+          {
+            "node": "Score & Tag Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup_FAQ_Answer": {
+      "main": [
+        [
+          {
+            "node": "Check_FAQ_Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check_FAQ_Exists": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate_FAQ_Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate_FAQ_Response": {
+      "main": [
+        [
+          {
+            "node": "Store_AI_Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ai model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate_FAQ_Response",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI_Tool_Redis": {
+      "ai_tool": [
+        [
+          {
+            "node": "Generate_FAQ_Response",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store_AI_Answer": {
+      "main": [
+        [
+          {
+            "node": "Respond to user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score & Tag Lead": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Lead Row": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Branch_FAQ_or_Support or general": {
+      "main": [
+        [
+          {
+            "node": "Lookup_FAQ_Answer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert Support Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Support Ticket": {
+      "main": [
+        [
+          {
+            "node": "Switch: High Priority",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch: High Priority": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Branch_FAQ_or_Support or general",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "136c63d9-0aa9-44e4-94e8-0465bfcf39f0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2988c879c91b7110549ac1fd40f0dcca4be668b02df3f69397c94714c2b91028"
+  },
+  "id": "BNv4cDbrWgxTgX5j",
+  "tags": []
+}

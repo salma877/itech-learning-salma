@@ -1,0 +1,136 @@
+{
+  "name": "WhatsApp Lead Capture Flow – IWAA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/whatsapp-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -656,
+        -96
+      ],
+      "id": "869dc3f0-d745-4965-9e6e-c8b637ddd671",
+      "name": "Receive WhatsApp Message",
+      "webhookId": "cca4f35d-e28d-4afa-b79d-d484dba6af63"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const body = item.json.body || {};\n\n  const parsed = body.parsed || {};\n  const name = parsed.name || null;\n  const phone = parsed.phone || body.from || null;\n  const service_interest = parsed.service_interest || null;\n  const raw_message = body.message || null;\n\n  return {\n    json: {\n      name,\n      phone,\n      service_interest,\n      raw_message\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        -96
+      ],
+      "id": "fe218a86-89bb-4198-9d8c-d3b4c3915166",
+      "name": "Map Lead Data"
+    },
+    {
+      "parameters": {
+        "tableId": "leads",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{ $json.phone }}"
+            },
+            {
+              "fieldId": "service_interest",
+              "fieldValue": "={{ $json.service_interest }}"
+            },
+            {
+              "fieldId": "raw_message",
+              "fieldValue": "={{ $json.raw_message }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        -96
+      ],
+      "id": "b6a7481f-dcf3-40dd-8fc0-be9653614bab",
+      "name": "Insert Lead",
+      "credentials": {
+        "supabaseApi": {
+          "id": "A8OZ6U1k9IdDGv9G",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"Thanks {{$json.name}}! We’ve captured your interest in {{$json.service_interest}} services. Our team will contact you shortly.\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -32,
+        -96
+      ],
+      "id": "4aebcf2b-137d-4e6d-b22f-fea76c9106e0",
+      "name": "Acknowledge User"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Map Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Lead": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "05217412-e824-449d-9f3b-1424c027b123",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2988c879c91b7110549ac1fd40f0dcca4be668b02df3f69397c94714c2b91028"
+  },
+  "id": "YrDWQqo0aBhX14B9",
+  "tags": []
+}
