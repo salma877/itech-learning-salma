@@ -56,6 +56,15 @@ Week4/
     │   └── results.csv  
     └── runbook.pdf  
 
+Week5/  
+└── Workflows/  
+    ├── Full pipeline (1).json  
+    ├── Social Media Lead Capture — Scoring & Auto-Tag.json  
+    ├── Social Media Lead Capture.json  
+    ├── WhatsApp Lead Capture & AI Response Flow (1).json  
+    ├── WhatsApp Lead Capture Flow — IWAA.json  
+    └── WhatsApp Lead Capture — Intent Routing.json  
+
 ---
 
 ## 📘 Internship Progress
@@ -108,6 +117,19 @@ Week4/
 - **Day 28 – Load Test & Pilot Pack** → Performed load testing (50–100 concurrent chat sessions). Packaged Pilot Readiness Kit: repo structure, `.env` sample, runbook, load test report, and Loom demo.  
 
 ✅ **Outcome**: Delivered production-ready workflows with schema optimization, reliable ingestion, caching, monitoring dashboards, and stress-tested load performance — packaged into a full Pilot Readiness Kit.  
+
+---
+
+### 🔹 Week 5 (Days 29–35) — Lead Capture & Qualification Workflows  
+- **Day 29 – WhatsApp Lead Capture Flow** → Built a workflow to capture WhatsApp leads via n8n webhook, auto-acknowledge messages, and log them into Supabase.  
+- **Day 30 – Lead Qualification Scoring** → Designed a scoring model (0–10) based on urgency, budget mention, and service interest. Implemented scoring inside workflow.  
+- **Day 31 – Multi-Channel Lead Collector (WhatsApp + Social)** → Unified schema in Supabase for WhatsApp, Instagram, and Facebook. Auto-tagged leads by source.  
+- **Day 32 – Social Media Lead Capture (Instagram/Facebook)** → Simulated lead forms/DM capture, stored in Supabase with source tags. Workflow JSON + schema screenshot delivered.  
+- **Day 33 – Lead Routing & Intent Detection** → Added routing layer to classify leads into categories (Support, Sales, General) and notify relevant teams.  
+- **Day 34 – High-Priority Lead Alerts** → Configured email alerts with HTML template for high-score leads (e.g., budget mentioned + urgent). Sent to sales/support team automatically.  
+- **Day 35 – Weekly Dashboard & Report** → Extended Looker Studio dashboard to include lead volumes, qualification scores, source breakdown, and high-priority alerts. Prepared weekly summary report.  
+
+✅ **Outcome**: Delivered a complete lead management pipeline — capturing, scoring, routing, and alerting across multiple channels, integrated into dashboards and reports.  
 
 ---
 
